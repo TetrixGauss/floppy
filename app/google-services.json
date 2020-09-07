@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "505061097469",
+    "firebase_url": "https://floppy-4284d.firebaseio.com",
+    "project_id": "floppy-4284d",
+    "storage_bucket": "floppy-4284d.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:505061097469:android:01fe219fbc421514f5a394",
+        "android_client_info": {
+          "package_name": "com.ath.floppy"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "505061097469-fbvucamkg30fshah3h06du2uu58lhnpn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCoLDmKTrxCqZ7jQuvx8pOVLCyMb7NrScM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "505061097469-fbvucamkg30fshah3h06du2uu58lhnpn.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

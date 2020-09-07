@@ -1,0 +1,46 @@
+<resources>
+    <string name="app_name">Floppy</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="filter_title">Choose filters</string>
+
+    <string name="swipe_left_for_register">Swipe Left for Register</string>
+    <string name="login">Login</string>
+    <string name="password">Password</string>
+    <string name="e_mail">Email</string>
+    <string name="tag">Explore Video Games and share with your friends.</string>
+    <string name="swipe_right_for_login">Swipe Right for Login</string>
+    <string name="register">Register</string>
+    <string name="re_type_password">Re-type Password</string>
+    <string name="user_name">UserName</string>
+
+    <string name="game_image">Games Image</string>
+    <string name="game_title">Title</string>
+
+    <string name="consoles_str">Consoles :</string>
+    <string name="genre_stuff_str">Genre and Stuff :</string>
+
+    <string name="release_date">Released :</string>
+    <string name="game_info">Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.</string>
+    <string name="platforms">Platforms :</string>
+    <string name="categories">Categories :</string>
+    <array name="consoles">
+        <item>PC</item>
+        <item>Playstation</item>
+        <item>Playstation 2</item>
+        <item>Playstation 3</item>
+        <item>Playstation 4</item>
+        <item>Playstation 5</item>
+        <item>X-Box</item>
+        <item>X-Box One</item>
+        <item>X-Box 360</item>
+        <item>X-Box X-Series</item>
+        <item>Nintendo Switch</item>
+    </array>
+
+    <string name="username">UserName</string>
+    <string name="favorite_text">Favorites</string>
+    <string name="wish_text">Wishlist</string>
+    <string name="settings_text">Settings</string>
+    <string name="sign_out_text">Sign Out</string>
+</resources>
