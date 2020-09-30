@@ -7,6 +7,9 @@ import androidx.room.ForeignKey;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
@@ -75,5 +78,31 @@ public class Platform {
 
     public void setGame_id(int game_id) {
         this.game_id = game_id;
+    }
+
+    protected Platform(Parcel in){
+        id = in.readInt();
+        slug = in.readString();
+        name = in.readString();
+        game_id = in.readInt();
+    }
+
+    public static final Parcelable.Creator<Result> CREATOR = new Parcelable.Creator<Result>() {
+        @Override
+        public Result createFromParcel(Parcel in) {
+            return new Result(in);
+        }
+
+        @Override
+        public Result[] newArray(int size) {
+            return new Result[size];
+        }
+    };
+
+    public void writeToParcel (Parcel dest, int flags){
+        dest.writeInt(id);
+        dest.writeString(slug);
+        dest.writeString(name);
+        dest.writeInt(game_id);
     }
 }

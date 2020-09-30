@@ -6,12 +6,14 @@ import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Parcelable;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
@@ -36,14 +38,24 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.ath.floppy.models.Platform;
+import com.ath.floppy.models.Platforms;
 import com.ath.floppy.models.Result;
 import com.ath.floppy.models.ServerResponse;
 import com.ath.floppy.view_models.PlatformViewModel;
 import com.ath.floppy.view_models.ResultViewModel;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.parse.ParseException;
+import com.parse.ParseObject;
+import com.parse.ParseQuery;
+import com.parse.ParseRelation;
+import com.parse.ParseUser;
+import com.parse.SaveCallback;
+
+import org.json.JSONArray;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import static android.nfc.tech.MifareUltralight.PAGE_SIZE;
@@ -51,20 +63,25 @@ import static com.ath.floppy.PaginationListener.PAGE_START;
 
 public class MainActivity extends AbstractActivity {
 
+    private static final float TOTAL_PAGES = 175000;
     public static RecyclerView.OnClickListener myOnClickListener;
     public static CompoundButton.OnCheckedChangeListener toggleFavoritesListener;
     public static CompoundButton.OnCheckedChangeListener toggleWishListListener;
     ServerResponse server;
     ServerResponse servertmp = new ServerResponse();
+    ArrayList<Platform> platformResponse = new ArrayList<Platform>();
+
     SharedPreferences prefs = null;
 
     ResultViewModel resultViewModel;
     PlatformViewModel platformViewModel;
-//    RatingsViewModel ratingsViewModel;
-    Adapter adaptre = null;
+
+        Adapter adaptre = null;
 
     ArrayList<Result> data;
     ArrayList<Result> dataDB;
+    ArrayList<Platform> dataDBPlatforms;
+//    Platforms platformsData;
     ArrayList<Platform> platformData;
 //    private SearchView searchView;
     private RecyclerView recyclerView;
@@ -74,11 +91,6 @@ public class MainActivity extends AbstractActivity {
     private int totalPage = 10;
     private boolean isLoading = false;
     private int currentPage = PAGE_START;
-    int itemCount = 0;
-    int dx_cust;
-    int dy_cust;
-    private int scrollPosition = 0;
-    private boolean shouldKeepScrollPosition = true;
 
     String json;
     String jsonServer;
@@ -92,8 +104,16 @@ public class MainActivity extends AbstractActivity {
 
     SearchView search;
     String url = "https://api.rawg.io/api/games";
+    String first_url = "https://api.rawg.io/api/games";
     String previous_url; // = "https://api.rawg.io/api/games";
     String next_url;
+
+    ProgressBar progressBar;
+    Boolean first_time;
+
+    List<ParseObject> games = null;
+
+    public static ParseObject games_entity;
 
     @Override
     public int getLayout() {
@@ -103,6 +123,7 @@ public class MainActivity extends AbstractActivity {
     @Override
     public void initialiseLayout() {
         prefs = getSharedPreferences("com.ath.floppy", MODE_PRIVATE);
+        first_time = true;
 
 //        getSupportActionBar().setCustomView(R.layout.main_toolbar);
         userProfile = findViewById(R.id.user_btn);
@@ -110,9 +131,13 @@ public class MainActivity extends AbstractActivity {
         userProfile.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, UserActivity.class);
-                startActivity(intent);
-                overridePendingTransition(R.anim.slide_in_left,R.anim.slide_out_right);
+                if(isConnected()) {
+                    Intent intent = new Intent(MainActivity.this, UserActivity.class);
+                    startActivity(intent);
+                    overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
+                }else {
+                    Toast.makeText(getApplicationContext(), "Connect to the Internet to have access!", Toast.LENGTH_LONG).show();
+                }
             }
         });
 
@@ -122,85 +147,36 @@ public class MainActivity extends AbstractActivity {
         recyclerView = findViewById(R.id.recycler_view);
         recyclerView.setHasFixedSize(true);
 
-        final RecyclerView.LayoutManager layoutManager = new GridLayoutManager(this,2);
+        layoutManager = new GridLayoutManager(this,2);
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setItemAnimator(new DefaultItemAnimator());
-//        final int dx_cust;
-//        int dy_cust;
 
-
-        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
-
-            @Override
-            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
-                super.onScrolled(recyclerView, dx, dy);
-                if(shouldKeepScrollPosition) {
-                    scrollPosition += dy;
-
-                }
-            }
-
-            @Override
-            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
-                super.onScrollStateChanged(recyclerView, newState);
-                adapter = (Adapter) recyclerView.getAdapter();
-//                recyclerView.getScrollState();
-//               if ( scrollPosition == recyclerView.getScrollState() )
-            }
-
-        });
-
-
-
-//        adapter = (Adapter) recyclerView.getAdapter();
-//        if (adapter != null) {
-//            adapter.setOnBottomReachedListener(new OnBottomReachedListener() {
-//                @Override
-//                public void onBottomReached(int position) {
-//                    //your code goes here
-//                    loadMoreGames(next_url);
-//                }
-//            });
-//        }
-//        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
-//            @Override
-//            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
-//                super.onScrollStateChanged(recyclerView, newState);
-//                if (previous_url != url) {
-//                    loadMoreGames(url);
-//                }
-//            }
-//        });
-
-
+        progressBar = findViewById(R.id.progress_bar);
 
         View view = getLayoutInflater().inflate(R.layout.game_layout,null);
 
-
         favorite_toggle = view.findViewById(R.id.favorites_btn);
-//        favorite_toggle.setBackgroundResource(R.drawable.ic_favorites);
-//        favorite_toggle.setText("");
         wish_toggle = view.findViewById(R.id.wishlist_btn);
-//        wish_toggle.setText("");
-
 
         myOnClickListener = new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
                 Intent intent = new Intent(MainActivity.this, GameActivity.class);
-                if (isConnected()){
-                    intent.putExtra("response",jsonServer ); //  json
-                } else {
-                    Gson gson = new GsonBuilder().create();
-                    servertmp.setResults(dataDB);
-                    String jsonData = gson.toJson(servertmp);
-                    intent.putExtra("response", jsonData);
-                }
+
+                Gson gson = new GsonBuilder().create();
+                servertmp.setResults(dataDB);
+                String jsonData = gson.toJson(servertmp);
+                intent.putExtra("response", jsonData);
+//                platformResponse.addAll(platformsData.getPlatforms());
+                String jsonDataPlatforms = gson.toJson(platformData);
+                intent.putExtra("response_platforms", jsonDataPlatforms);
+
 
                 int pos = (int) v.getTag();
                 intent.putExtra("position", pos);
-                shouldKeepScrollPosition = false;
+                intent.putExtra("from", "main");
+
                 startActivity(intent);
             }
         };
@@ -208,18 +184,24 @@ public class MainActivity extends AbstractActivity {
         toggleFavoritesListener = new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                int pos = (int) buttonView.getTag();
                 if (isChecked) {
                     // The toggle is enabled
                     favorite_is_checked = true;
+                    dataDB.get(pos).setFavorite(true);
+
                     buttonView.setBackgroundResource(R.drawable.ic_favorites_checked);
                 } else {
                     favorite_is_checked = false;
+                    dataDB.get(pos).setFavorite(false);
                     // The toggle is disabled
                     buttonView.setBackgroundResource(R.drawable.ic_favorites);
+//                    createGameObject();
                 }
             }
         };
 
+//        toggleFavoritesListener.onCheckedChanged(favorite_toggle,true);
         toggleWishListListener = new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -239,17 +221,42 @@ public class MainActivity extends AbstractActivity {
 
     @Override
     public void runOperation() {
+        progressBar.setVisibility(View.INVISIBLE);
+        recyclerView.addOnScrollListener(new PaginationListener((GridLayoutManager) layoutManager) {
+            @Override
+            protected void loadMoreItems() {
+                progressBar.setVisibility(View.VISIBLE);
+                isLoading = true;
+                //Increment page index to load the next one
+                currentPage += 1;
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        loadNextPage();
+                    }
+                }, 1000);
+            }
 
-        recyclerView.scrollToPosition(scrollPosition);
+            @Override
+            public boolean isLastPage() {
+                return isLastPage;
+            }
+
+            @Override
+            public boolean isLoading() {
+                return isLoading;
+            }
+        });
 
         resultViewModel = ViewModelProviders.of(this).get(ResultViewModel.class);
+        platformViewModel = ViewModelProviders.of(this).get(PlatformViewModel.class);
 
 
         if (prefs.getBoolean("initiation", true)) {
             //the app is being launched for first time, do something
             Log.d("Comments", "First time");
             if (isConnected()) {
-                fetchGames(url);
+                loadFirstPage();
             }else {
                 Toast.makeText(MainActivity.this, "Please check your internet connection and restart the TV-Guide!",
                         Toast.LENGTH_SHORT).show();
@@ -258,8 +265,12 @@ public class MainActivity extends AbstractActivity {
             prefs.edit().putBoolean("initiation", false).apply();
         }else {
             if (isConnected()) {
+                getFavorites();
+                if (first_time) {
+                    loadFirstPage();
+                    first_time = false;
+                }
 
-                fetchGames(url);
 
             } else {
                 Toast.makeText(MainActivity.this, "Please check your internet connection and try again!",
@@ -276,9 +287,7 @@ public class MainActivity extends AbstractActivity {
                         recyclerView.setAdapter(adaptre);
                     }
                 });
-
             }
-
         }
     }
 
@@ -292,6 +301,10 @@ public class MainActivity extends AbstractActivity {
 
     }
 
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+    }
 
     //////////////////////////////////////////////////////////////////
 
@@ -302,7 +315,7 @@ public class MainActivity extends AbstractActivity {
             NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
             if (networkInfo == null) return false;
 
-            return networkInfo.isConnected() && networkInfo.getType() == ConnectivityManager.TYPE_WIFI;
+            return networkInfo.isConnected(); // && networkInfo.getType() == ConnectivityManager.TYPE_WIFI ;
         } catch (Exception exception) {
             exception.printStackTrace();
         }
@@ -310,12 +323,12 @@ public class MainActivity extends AbstractActivity {
         return false;
     }
 
-    private void fetchGames(String str) {
+        private void fetchGames(String first_url) {
         RequestQueue queue = Volley.newRequestQueue(this);
-        final String source = str;
+        final String source = first_url;
 
         // Request a string response from the provided URL.
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, source,
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, first_url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
@@ -326,54 +339,69 @@ public class MainActivity extends AbstractActivity {
 
                         next_url = server.getNext();
                         previous_url = server.getPrevious();
-//                        url = server.getNext();
                         data = (ArrayList<Result>) server.getResults();
-                        dataDB = data;
-//                        int resid = 1;
-//                        int prid = 1;
+//                        for (Result res: data){
+//                            if (isFavorite(res)){
+//                                res.setFavorite(true);
+//                            }else {
+//                                res.setFavorite(false);
+//                            }
+//                        }
+//                        if (previous_url == null){
+//                            dataDB = data;
+//                        }else {
+//                            dataDB.addAll(data);
+//                        }
 
-                        for (Result res : data
-                        ) {
+                        for (Result res : data) { //dataDB
+                            if (isFavorite(res)){
+                                res.setFavorite(true);
+                            }else {
+                                res.setFavorite(false);
+                            }
                             Log.d("COMMUNICATION", res.toString());
 
                             resultViewModel.insert(res);
                             platformData = res.getPlatforms();
-//                            for (Platform pr : platformData){
+
+//                            for (Platform pr : platformData ){ //platformsData.getPlatforms()
 //                                platformViewModel.insert(pr);
+//                                pr.setGame_id(res.getId());
+//                                Log.d("PLATFORMS", pr.toString());
+//
+//                                pr.setId(platformData.indexOf(pr));
 //                            }
                         }
+                        if (previous_url == null){
+                            dataDB = data;
+                        }else {
+                            dataDB.addAll(data);
+                        }
 
-                        Gson gson = new GsonBuilder().create();
+//                        Gson gson = new GsonBuilder().create();
 
-                        json = gson.toJson(server.getResults());
-                        jsonServer = gson.toJson(server);
+//                        json = gson.toJson(server.getResults());
+//                        for (Result res: server.getResults()){
+////                            res.getPlatforms();
+//                            String jsonPlat = gson.toJson(res.getPlatforms());
+//
+//                            Log.d("plats", jsonPlat);
+//                        }
+//                        String jsonPlat = gson.toJson(server.getResults())
+//                        jsonServer = gson.toJson(server);
 
-                        Log.d("RESULTS", json);
+//                        Log.d("RESULTS", json);
                         if (previous_url == null) {
                             adapter = new Adapter(data);
                         }else {
-                            adapter.setResults(data);
+                            for (Result r: data){
+                                adapter.getResults().add(r);
+                            }
                         }
 
                         recyclerView.setAdapter(adapter);
-//                        recyclerView.addOnScrollListener(new PaginationListener((GridLayoutManager) layoutManager) {
-//                            @Override
-//                            protected void loadMoreItems() {
-//                                isLoading = true;
-//                                currentPage++;
-////                                doApiCall();
-//                            }
-//                            @Override
-//                            public boolean isLastPage() {
-//                                return isLastPage;
-//                            }
-//                            @Override
-//                            public boolean isLoading() {
-//                                return isLoading;
-//                            }
-//
-//
-//                        });
+                        recyclerView.scrollToPosition(adapter.getItemCount() - 40);
+
                     }
                 }, new Response.ErrorListener() {
             //            @RequiresApi(api = Build.VERSION_CODES.KITKAT)
@@ -412,11 +440,10 @@ public class MainActivity extends AbstractActivity {
     private void loadMoreGames (String url){
         if (isConnected()) {
             fetchGames(url);
-
+            isLoading = false;
         } else {
             Toast.makeText(MainActivity.this, "Please check your internet connection and try again!",
                     Toast.LENGTH_SHORT).show();
-//            resultViewModel = ViewModelProviders.of(this).get(ResultViewModel.class);
             resultViewModel.getResults().observe(this, new Observer<List<Result>>() {
 
                 @Override
@@ -429,6 +456,82 @@ public class MainActivity extends AbstractActivity {
                 }
             });
 
+        }
+    }
+
+    private void loadFirstPage() {
+        fetchGames(first_url);
+        progressBar.setVisibility(View.GONE);
+    }
+
+    private void loadNextPage() {
+        loadMoreGames(next_url);
+        progressBar.setVisibility(View.INVISIBLE);
+    }
+
+    public void getFavorites(){
+        ParseUser currentUser = ParseUser.getCurrentUser();
+        ParseRelation<ParseObject> relation = currentUser
+                .getRelation("favoriteGames");
+//            List<ParseObject> games = null;
+//            ParseQuery<ParseObject> query = ParseQuery.getQuery("favoriteGames");
+//            query.whereEqualTo("gameName", res.getName());
+        try {
+            games = relation.getQuery().find();
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public boolean isFavorite(Result res) {
+        boolean flag = false;
+
+            for (ParseObject game : games) {
+                if (game.getString("gameName").equals(res.getName())) {
+                    flag = true;
+                    break;
+                }
+            }
+        return flag;
+    }
+
+    public void addFavoriteGame() {
+
+        ParseUser currentUser = ParseUser.getCurrentUser();
+        if (currentUser != null) {
+
+            ParseRelation<ParseObject> relation = currentUser
+                    .getRelation("favoriteGames");
+            relation.add(games_entity);
+
+            // Saves the object.
+            // Notice that the SaveCallback is totally optional!
+            currentUser.saveInBackground(new SaveCallback() {
+                @Override
+                public void done(ParseException e) {
+                    // Here you can handle errors, if thrown. Otherwise, "e" should be null
+                }
+            });
+        }
+
+    }
+
+    public void deleteFavoriteGame(){
+        ParseUser currentUser = ParseUser.getCurrentUser();
+        if (currentUser != null) {
+
+            ParseRelation<ParseObject> relation = currentUser
+                    .getRelation("favoriteGames");
+            relation.remove(games_entity);
+
+            // Saves the object.
+            // Notice that the SaveCallback is totally optional!
+            currentUser.saveInBackground(new SaveCallback() {
+                @Override
+                public void done(ParseException e) {
+                    // Here you can handle errors, if thrown. Otherwise, "e" should be null
+                }
+            });
         }
     }
 

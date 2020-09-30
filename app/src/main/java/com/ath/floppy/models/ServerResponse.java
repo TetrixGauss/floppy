@@ -22,7 +22,7 @@ public class ServerResponse {
     private String previous;
     @SerializedName("results")
     @Expose
-    private ArrayList<Result> results = null;
+    private ArrayList<Result> results;
 
 //    public ServerResponse(int count, String next, String previous){
 //        this.count = count;

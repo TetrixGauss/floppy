@@ -8,6 +8,8 @@ import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
+import androidx.room.TypeConverter;
+import androidx.room.TypeConverters;
 
 import java.util.ArrayList;
 
@@ -114,7 +116,7 @@ public class Result implements Parcelable {
     @Ignore
     @SerializedName("platforms")
     @Expose
-    private ArrayList<Platform> platforms = null;
+    private ArrayList<Platform> platforms;
 
     public Result(int id, String slug, String name, String released, boolean tba,
                   String backgroundImage, double rating, int ratingTop,
@@ -333,7 +335,7 @@ public class Result implements Parcelable {
     }
 
     public void setPlatforms(ArrayList<Platform> platforms) {
-        this.platforms = platforms;
+        this.platforms.addAll(platforms);
     }
 
     @Override

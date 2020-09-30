@@ -8,6 +8,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
+import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -17,17 +18,13 @@ import com.squareup.picasso.Picasso;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Adapter extends RecyclerView.Adapter<Adapter.MyViewHolder> {
-
-    private ArrayList<Result> results;
-    int id;
+public class ListAdapter extends RecyclerView.Adapter<ListAdapter.MyViewHolder>  {
+    private ArrayList<Result> favorites;
     int position;
+    boolean isLoadingAdded;
 
     private static final int ITEM = 0;
     private static final int LOADING = 1;
-
-    // flag for footer ProgressBar (i.e. last item of list)
-    private boolean isLoadingAdded = false;
 
     public static class MyViewHolder extends RecyclerView.ViewHolder {
 
@@ -38,9 +35,7 @@ public class Adapter extends RecyclerView.Adapter<Adapter.MyViewHolder> {
 
         ToggleButton favorite;
         ToggleButton wish;
-
-
-        public MyViewHolder(View itemView) {
+        public MyViewHolder(@NonNull View itemView) {
             super(itemView);
 
             this.rName = (TextView) itemView.findViewById(R.id.gameTitle);
@@ -48,49 +43,44 @@ public class Adapter extends RecyclerView.Adapter<Adapter.MyViewHolder> {
             this.cardview = itemView.findViewById(R.id.card_view);
             this.favorite = itemView.findViewById(R.id.favorites_btn);
             this.wish = itemView.findViewById(R.id.wishlist_btn);
-
         }
     }
 
-    public Adapter(ArrayList<Result> data) {
-        this.results = data;
-
+    public ListAdapter (ArrayList<Result> data){
+        this.favorites = data;
     }
 
+    @NonNull
     @Override
-    public MyViewHolder onCreateViewHolder(ViewGroup parent,
-                                           int viewType) {
+    public MyViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.game_layout, parent, false);
 
         CardView cardView = view.findViewById(R.id.card_view);
-        cardView.setOnClickListener(MainActivity.myOnClickListener);
+        cardView.setOnClickListener(FavoriteListActivity.myOnClickListener);
 
         ToggleButton favorite = view.findViewById(R.id.favorites_btn);
         ToggleButton wish = view.findViewById(R.id.wishlist_btn);
 
-        favorite.setOnCheckedChangeListener(MainActivity.toggleFavoritesListener);
-        wish.setOnCheckedChangeListener(MainActivity.toggleWishListListener);
+        favorite.setOnCheckedChangeListener(FavoriteListActivity.toggleFavoritesListener);
+        wish.setOnCheckedChangeListener(FavoriteListActivity.toggleWishListListener);
 
-
-        MyViewHolder myViewHolder = new MyViewHolder(view);
-
+        ListAdapter.MyViewHolder myViewHolder = new ListAdapter.MyViewHolder(view);
         return myViewHolder;
     }
 
     @Override
-    public void onBindViewHolder(final MyViewHolder holder, final int listPosition) {
-
+    public void onBindViewHolder(@NonNull MyViewHolder holder, int listPosition) {
         TextView rName = holder.rName;
         ImageView imview = holder.back_image;
         Context context = imview.getContext();
 
         ToggleButton favorite = holder.favorite;
         ToggleButton wish = holder.wish;
-        Boolean favorite_flag = results.get(listPosition).isFavorite();
-        Boolean wish_flag = results.get(listPosition).isWish();
+        Boolean favorite_flag = favorites.get(listPosition).isFavorite();
+        Boolean wish_flag = favorites.get(listPosition).isWish();
 
-        rName.setText(results.get(listPosition).getName());
-        String urlSrt = results.get(listPosition).getBackgroundImage();
+        rName.setText(favorites.get(listPosition).getName());
+        String urlSrt = favorites.get(listPosition).getBackgroundImage();
         Picasso.with(context)
                 .load(urlSrt)
                 .centerCrop()
@@ -103,59 +93,58 @@ public class Adapter extends RecyclerView.Adapter<Adapter.MyViewHolder> {
             favorite.setBackgroundResource(R.drawable.ic_favorites);
         }
 
-        if (results.get(listPosition).isWish()){
-            wish.setBackgroundResource(R.drawable.ic_wishlist_checked);
-        }else {
-            wish.setBackgroundResource(R.drawable.ic_wishlist);
-        }
+//        if (favorites.get(listPosition).isWish()){
+//            wish.setBackgroundResource(R.drawable.ic_wishlist_checked);
+//        }else {
+//            wish.setBackgroundResource(R.drawable.ic_wishlist);
+//        }
 
         position = listPosition;
-        holder.favorite.setTag(position);
         holder.cardview.setTag(position);
-        if (position == results.size() - 1){
+        holder.favorite.setTag(position);
+        if (position == favorites.size() - 1){
 
         }
-
     }
 
-    public void setResults(List<Result> resultsvm) {
-        this.results = (ArrayList<Result>) resultsvm;
+    public void setResults(List<Result> favoritesvm) {
+        this.favorites = (ArrayList<Result>) favoritesvm;
         notifyDataSetChanged();
     }
 
     public ArrayList<Result> getResults() {
-        return results;
+        return favorites;
     }
 
     @Override
     public int getItemViewType(int position) {
-        return (position == results.size() - 1 && isLoadingAdded) ? LOADING : ITEM;
+        return (position == favorites.size() - 1 && isLoadingAdded) ? LOADING : ITEM;
     }
 
     @Override
     public int getItemCount() {
-        if (results != null) {
-            return results.size();
+        if (favorites != null) {
+            return favorites.size();
         }else {
             return 0;
         }
     }
 
     public void add(Result mc) {
-        results.add(mc);
-        notifyItemInserted(results.size() - 1);
+        favorites.add(mc);
+        notifyItemInserted(favorites.size() - 1);
     }
 
-    public void addAll(ArrayList < Result > results) {
-        for (Result res: results) {
+    public void addAll(ArrayList < Result > favorites) {
+        for (Result res: favorites) {
             add(res);
         }
     }
 
     public void remove(Result result) {
-        int position = results.indexOf(result);
+        int position = favorites.indexOf(result);
         if (position > -1) {
-            results.remove(position);
+            favorites.remove(position);
             notifyItemRemoved(position);
         }
     }
@@ -179,15 +168,17 @@ public class Adapter extends RecyclerView.Adapter<Adapter.MyViewHolder> {
     public void removeLoadingFooter() {
         isLoadingAdded = false;
 
-        int position = results.size() - 1;
+        int position = favorites.size() - 1;
         Result item = getItem(position);
         if (item != null) {
-            results.remove(position);
+            favorites.remove(position);
             notifyItemRemoved(position);
         }
     }
 
     public Result getItem(int position) {
-        return results.get(position);
+        return favorites.get(position);
     }
+
+
 }

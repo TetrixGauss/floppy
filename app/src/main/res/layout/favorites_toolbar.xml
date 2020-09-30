@@ -9,14 +9,15 @@
         android:id="@+id/user_btn"
         android:layout_width="24dp"
         android:layout_height="24dp"
-        android:background="@drawable/ic_user"/>
+        android:background="@drawable/ic_back_floppy"
+        android:onClick="goBack"/>
 
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/toolbar_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:maxEms="15"
-        android:text="@string/app_name"
+        android:text="@string/favorite_text"
         android:textColor="#e388c8"
         android:textSize="30sp"
         android:gravity="center"
